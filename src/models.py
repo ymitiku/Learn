@@ -2,27 +2,26 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 from .resnet import resnet50
-class MixupLearnModel(nn.Module):
-    def __init__(self, num_classes = None, siamese = False, width_per_group=16):
+class ClassificationModel(nn.Module):
+    def __init__(self, num_classes, width_per_group = 16):
         super().__init__()
-        if not siamese:
-            assert num_classes is not None
-        self.siamese = siamese
         self.backbone = resnet50(width_per_group=width_per_group)
-        if siamese:
-            self.fc = nn.Linear(width_per_group * 32*2, num_classes)
-        else:
-            self.fc = nn.Linear(width_per_group * 32, num_classes)
+        self.linear = nn.Linear(width_per_group * 32, num_classes) 
             
-    def forward(self, inputs1, inputs2 = None):
-        if self.siamese:
-            assert inputs2 is not None
+    def forward(self, inputs):
+        return self.linear(self.backbone(inputs))
         
-        x = self.backbone(inputs1)
-        if self.siamese:
-            x2 = self.backbone(inputs2)
-            x = torch.cat([x, x2], dim=1)
-        x = self.fc(x)
+class MixupModel(nn.Module):
+    def __init__(self, width_per_group = 16):
+        super().__init__()
+        self.backbone = resnet50(width_per_group=width_per_group)
+        self.linear = nn.Linear(width_per_group * 32 * 2, 1) 
+            
+    def forward(self, inputs):
+        assert isinstance(inputs, list)
+        x = self.backbone(inputs[0])
+        x = torch.cat([x, self.backbone(inputs[1])], dim=1)
+        x = self.linear(x)
         
         return x
         

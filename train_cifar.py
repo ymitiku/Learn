@@ -1,9 +1,11 @@
-from src.models import MixupLearnModel
+from src.models import ClassificationModel
 import torch
 from torchvision import transforms
 from torchvision import datasets
 from torch.utils.data import Dataset, DataLoader
-
+import argparse
+import numpy as np 
+import os
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 def train(model, dataloader, optimizer, criterion, epoch):
@@ -28,7 +30,7 @@ def train(model, dataloader, optimizer, criterion, epoch):
         losses += loss.item() * size 
         corrects += (pred == labels).sum()
         total += size
-    print("Epoch: {} loss: {:.4f} accuracy: {:.2f}%".format(epoch, losses/total, corrects * 100/total))
+    print("Training: {} loss: {:.4f} accuracy: {:.2f}%".format(epoch, losses/total, corrects * 100/total))
     
     return losses/total, corrects/total
         
@@ -51,13 +53,42 @@ def evaluate(model, dataloader,  criterion, epoch):
         losses += loss.item() * size 
         corrects += (pred == labels).sum()
         total += size
-    print("Epoch: {} loss: {:.4f} accuracy: {:.2f}%".format(epoch, losses/total, corrects * 100/total))
-    
+    print("Validation: {} loss: {:.4f} accuracy: {:.2f}%".format(epoch, losses/total, corrects * 100/total))
+    return losses/total, corrects/total
+def log_stats(path, train_loss, train_acc, test_loss, test_acc):
+    file_exists = os.path.exists(path)
+     
+
+    with open(path, "a+") as log_file:
+        if not file_exists:
+            log_file.write("train-loss,train-acc,test-loss,test-acc\n")
+        log_file.write("{},{},{},{}\n".format(train_loss, train_acc, test_loss, test_acc))
         
+def save_ckpt(args, model, optimizer, scheduler, epoch, best_acc):
+    output_folder = os.path.join(args.expdir, "checkpoints")
+    output_path = os.path.join(output_folder, "ckpt.pth")
+    torch.save({"model":model, "optimizer":optimizer, "scheduler":scheduler, "epoch":epoch, "best_acc":best_acc}, output_path)
+def get_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--epochs", type=int, default=200, help="Number of epoch to train the model ")
+    parser.add_argument("--batch-size", type=int, default=256)
+    parser.add_argument("--lr", type=float, default=1e-3, help="Initial learning rate")
+    parser.add_argument("--logdir", type=str, default="./logs", help="Directory to save logging information")
+    parser.add_argument("--expdir", type=str, default="./exps", help="Directory to save experiment information")
         
-        
+    args = parser.parse_args()
+
 def main():
-    model = MixupLearnModel(10)
+    
+    args = get_args()
+    
+    if not os.path.exists(args.logdir):
+        os.mkdir(args.logdir)
+    if not os.path.exists(args.expdir):
+        os.mkdir(args.expdir)
+    log_path = os.path.join(args.logdir, "train.log")
+    
+    model = ClassificationModel(10)
     model = model.to(device)
     cifar_normalize = transforms.Normalize(
         (0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
@@ -82,15 +113,25 @@ def main():
                                 train=False,
                                 download=True,
                                 transform=transform_cifar_test)
-    trainloader = DataLoader(trainset, batch_size = 128, shuffle=True)
-    testloader = DataLoader(trainset, batch_size = 128, shuffle=True)
+    trainloader = DataLoader(trainset, batch_size = args.batch_size, shuffle=True)
+    testloader = DataLoader(testset, batch_size = args.batch_size, shuffle=False)
     
-    optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.9)
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+
     criterion = torch.nn.CrossEntropyLoss()
-    
-    for i in range(100):
-        train_loss, train_accuracy = train(model, trainloader, optimizer, criterion, i+1)
-        val_loss, val_accuracy = train(model, testloader,  criterion, i+1)
+    epochs = 100
+    best_acc = 0
+    for epoch in range(epochs):
+        print("Epoch: {}/{}".format(i+1, epochs))
+        train_loss, train_accuracy = train(model, trainloader, optimizer, criterion, epoch+1)
+        val_loss, val_accuracy = evaluate(model, testloader,  criterion, epoch+1)
+        scheduler.step()
+        log_stats(log_path, train_loss, train_accuracy, val_loss, val_accuracy)
+        if val_accuracy > best_acc:
+            save_ckpt(args,model, optimizer, scheduler, epoch, best_acc)
+            best_acc = val_accuracy
+        
     
 if __name__ == "__main__":
     main(); 
