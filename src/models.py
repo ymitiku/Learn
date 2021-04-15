@@ -12,10 +12,10 @@ class ClassificationModel(nn.Module):
         return self.linear(self.backbone(inputs))
         
 class MixupModel(nn.Module):
-    def __init__(self, width_per_group = 16):
+    def __init__(self):
         super().__init__()
         self.backbone = ResNet18()
-        self.linear = nn.Linear(self.backbone.out_dim, num_classes)  
+        self.linear = nn.Linear(self.backbone.out_dim, 10)  
             
     def forward(self, inputs):
         assert isinstance(inputs, list)

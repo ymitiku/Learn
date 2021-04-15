@@ -161,8 +161,8 @@ def main():
         scheduler.step()
         log_stats(log_path, epoch, train_loss, train_accuracy, val_loss, val_accuracy)
         if val_accuracy > best_acc:
-            print("Found best accuracy:{:.2f} saving to disk".format(best_acc * 100))
             best_acc = val_accuracy
+            print("Found best accuracy:{:.2f} saving to disk".format(best_acc * 100))
             save_ckpt(args,model, optimizer, scheduler, epoch, best_acc)
         
     
