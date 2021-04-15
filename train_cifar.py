@@ -19,7 +19,7 @@ def train(model, dataloader, optimizer, criterion, epoch):
         
         loss = criterion(outputs, labels)
         
-        optimizer.zero_grads()
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
         

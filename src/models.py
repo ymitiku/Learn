@@ -9,7 +9,11 @@ class MixupLearnModel(nn.Module):
             assert num_classes is not None
         self.siamese = siamese
         self.backbone = resnet50(width_per_group=width_per_group)
-        self.fc = nn.Linear(width_per_group * 32*2, num_classes)
+        if siamese:
+            self.fc = nn.Linear(width_per_group * 32*2, num_classes)
+        else:
+            self.fc = nn.Linear(width_per_group * 32, num_classes)
+            
     def forward(self, inputs1, inputs2 = None):
         if self.siamese:
             assert inputs2 is not None
