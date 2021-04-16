@@ -24,7 +24,7 @@ def mixup_data(x, k = 4):
     
     rand_indices_2[rand_bits==0] = torch.randint(0, batch_size, ((rand_bits==0).sum().item(),)).cuda()
     
-    labels = torch.all(rand_bits == 0, dim=0)
+    labels = torch.all(rand_bits == 0, dim=0).float()
     
     
     x = x.to(device)
