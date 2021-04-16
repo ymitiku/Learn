@@ -15,7 +15,7 @@ class MixupModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.backbone = ResNet18()
-        self.linear = nn.Linear(self.backbone.out_dim, 10)  
+        self.linear = nn.Linear(self.backbone.out_dim * 2, 1)  
             
     def forward(self, inputs):
         assert isinstance(inputs, list)
