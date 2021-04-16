@@ -22,13 +22,13 @@ def mixup_data(x, k = 4):
     
     rand_indices_2 = rand_indices.clone()
     
-    rand_indices_2[rand_bits==0] = torch.randint(0, batch_size, ((rand_bits==0).sum().item(),))
+    rand_indices_2[rand_bits==0] = torch.randint(0, batch_size, ((rand_bits==0).sum().item(),)).cuda()
     
     labels = torch.all(rand_bits == 0, dim=0)
     
     
     x = x.to(device)
-    lams_dist = torch.distributions.Dirichlet([1/k] * k)
+    lams_dist = torch.distributions.Dirichlet(torch.tensor([1/k] * k))
     
     lams1 = lams_dist.sample([len(x)])
     lams2 = lams_dist.sample([len(x)])
@@ -39,22 +39,23 @@ def mixup_data(x, k = 4):
     mixed_x_1 = None
     mixed_x_2 = None
     
-
     for i in range(0, k):
+        
         batch_size = x.size()[0]
         index = torch.randperm(batch_size).to(device)
         index1 = rand_indices[i]
+        
         index2 = rand_indices_2[i]
         if mixed_x_1 is None:
-            mixed_x_1 = vec_mul_ten(lams1[i, :], x[index1])
-            mixed_x_2 = vec_mul_ten(lams2[i, :], x[index2])
+            mixed_x_1 = vec_mul_ten(lams1[:, i], x[index1])
+            mixed_x_2 = vec_mul_ten(lams2[:, i], x[index2])
         else:
-            mixed_x_1 += vec_mul_ten(lams1[i, :], x[index1])
-            mixed_x_2 += vec_mul_ten(lams2[i, :], x[index2])
+            mixed_x_1 += vec_mul_ten(lams1[:, i], x[index1])
+            mixed_x_2 += vec_mul_ten(lams2[:, i], x[index2])
             
         
         
-    return mixed_x_1, mixed_x_2
+    return mixed_x_1, mixed_x_2, labels
 
 
 class MixupDataset(Dataset):
@@ -67,7 +68,9 @@ class MixupDataset(Dataset):
         dataloader = DataLoader(self.dataset, batch_size = len(self.dataset), shuffle=True)
         assert len(dataloader) == 1
         for images, _ in dataloader:
+            print("Mixing up dataset")
             self.mixed_images1, self.mixed_images2, self.labels = mixup_data(images, k=4)
+            print("Done!")
         
     def __len__(self):
         return len(self.dataset)

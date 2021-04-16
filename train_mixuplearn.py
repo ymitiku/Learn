@@ -1,4 +1,4 @@
-from src.models import ClassificationModel
+from src.models import MixupModel
 from src.utils import MixupDataset
 import torch
 from torchvision import transforms
@@ -14,10 +14,10 @@ def train(model, dataloader, optimizer, criterion):
     losses = 0
     corrects = 0
     total = 0
-    for (inputs2, inputs2), labels in dataloader:
+    for (inputs1, inputs2), labels in dataloader:
         inputs1 = inputs1.to(device)
         inputs2 = inputs2.to(device)
-        labels = labels.to(device)
+        labels = labels.to(device).view(-1, 1)
         
         outputs = model([inputs1, inputs2])
         
@@ -120,23 +120,20 @@ def main():
                                 train=True,
                                 download=True,
                                 transform=transform_cifar_train)
-    testset = datasets.CIFAR10(root='./data',
-                                train=False,
-                                download=True,
-                                transform=transform_cifar_test)
-    trainloader = DataLoader(trainset, batch_size = args.batch_size, shuffle=True)
-    testloader = DataLoader(testset, batch_size = args.batch_size, shuffle=False)
+    
+    traindataset = MixupDataset(trainset)
+    trainloader = DataLoader(traindataset, batch_size = args.batch_size, shuffle=True)
     if args.resume and os.path.exists(os.path.join(args.expdir, "checkpoints", "ckpt.pth")):
         start_epoch, model, optimizer, scheduler = load_state_from_file(args)
         print("Resuming from state: start-epoch: {}".format(start_epoch))
     else:
-        model = ClassificationModel(10)
+        model = MixupModel()
         model = model.to(device)
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum, weight_decay=args.weight_decay)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
         start_epoch = 0
     
-    criterion = torch.nn.CrossEntropyLoss()
+    criterion = torch.nn.BCEWithLogitsLoss()
 
     
     for epoch in range(start_epoch, args.epochs):
@@ -145,7 +142,7 @@ def main():
         scheduler.step()
         log_stats(log_path, epoch, train_loss, train_accuracy)
         save_ckpt(args,model,optimizer, scheduler, epoch)
-        
+        traindataset.build_mixup_dataset()
         
     
 if __name__ == "__main__":
