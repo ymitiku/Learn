@@ -129,7 +129,7 @@ def main():
     trainloader = DataLoader(traindataset, batch_size = args.batch_size, shuffle=True)
     if args.resume and os.path.exists(os.path.join(args.expdir,  "ckpt.pth")):
         start_epoch, model, optimizer, scheduler = load_state_from_file(args)
-        print("Resuming from state: start-epoch: {}".format(start_epoch))
+        print("Resuming from state: start-epoch: {}".format(start_epoch+1))
     else:
         model = MixupModel()
         model = model.to(device)

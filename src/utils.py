@@ -18,13 +18,13 @@ def mixup_data(x, k = 4):
     
     rand_indices = torch.stack([torch.randperm(batch_size) for i in range(k)], dim=0).cuda()
     
-    rand_bits = torch.from_numpy(np.random.choice([0, 1], p=[0.82, 0.18], size=rand_indices.shape)).cuda()
+    rand_bits = torch.from_numpy(np.random.choice([0, 1], p=[0.75, 0.25], size=rand_indices.shape)).cuda()
     
     rand_indices_2 = rand_indices.clone()
     
     rand_indices_2[rand_bits==0] = torch.randint(0, batch_size, ((rand_bits==0).sum().item(),)).cuda()
     
-    labels = torch.all(rand_bits == 0, dim=0).float()
+    labels = torch.any(rand_bits == 1, dim=0).float()
     
     
     x = x.to(device)
@@ -55,7 +55,7 @@ def mixup_data(x, k = 4):
             
         
         
-    return mixed_x_1, mixed_x_2, labels
+    return mixed_x_1.cpu(), mixed_x_2.cpu(), labels.cpu()
 
 
 class MixupDataset(Dataset):
@@ -69,7 +69,7 @@ class MixupDataset(Dataset):
         assert len(dataloader) == 1
         for images, _ in dataloader:
             print("Mixing up dataset")
-            self.mixed_images1, self.mixed_images2, self.labels = mixup_data(images, k=4)
+            self.mixed_images1, self.mixed_images2, self.labels = mixup_data(images, k=2)
             print("Done!")
         
     def __len__(self):
