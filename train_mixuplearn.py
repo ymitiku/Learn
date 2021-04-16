@@ -14,10 +14,12 @@ def train(model, dataloader, optimizer, criterion):
     losses = 0
     corrects = 0
     total = 0
-    for (inputs1, inputs2), labels in dataloader:
+    for batch_index, ((inputs1, inputs2), labels) in enumerate(dataloader):
+        
         inputs1 = inputs1.to(device)
         inputs2 = inputs2.to(device)
         labels = labels.to(device).view(-1, 1)
+        
         
         outputs = model([inputs1, inputs2])
         
@@ -27,11 +29,13 @@ def train(model, dataloader, optimizer, criterion):
         loss.backward()
         optimizer.step()
         
-        _, pred = torch.max(outputs, dim=1)
+        pred = torch.round(outputs)
         size = labels.size(0)
         losses += loss.item() * size 
         corrects += (pred == labels).sum()
         total += size
+        if (batch_index+1) % 50==0:
+            print("[{}/{}] loss: {:.4f} acc: {:.2f}%".format(batch_index+1, len(dataloader), losses/total, corrects/total *100))
     print("Training: loss: {:.4f} accuracy: {:.2f}%({}/{})".format(losses/total, corrects * 100/total, corrects, total))
     
     return losses/total, corrects/total
