@@ -83,7 +83,7 @@ def get_args():
     args = parser.parse_args()
     return args
 def load_state_from_file(args):
-    state = torch.load(os.path.join(args.expdir, "checkpoints", "ckpt.pth"))
+    state = torch.load(os.path.join(args.expdir,  "ckpt.pth"))
     model = state["model"]
     optimizer = state["optimizer"]
     scheduler = state["scheduler"]
@@ -127,7 +127,7 @@ def main():
     
     traindataset = MixupDataset(trainset)
     trainloader = DataLoader(traindataset, batch_size = args.batch_size, shuffle=True)
-    if args.resume and os.path.exists(os.path.join(args.expdir, "checkpoints", "ckpt.pth")):
+    if args.resume and os.path.exists(os.path.join(args.expdir,  "ckpt.pth")):
         start_epoch, model, optimizer, scheduler = load_state_from_file(args)
         print("Resuming from state: start-epoch: {}".format(start_epoch))
     else:
