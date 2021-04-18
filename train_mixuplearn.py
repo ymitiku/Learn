@@ -7,6 +7,7 @@ from torch.utils.data import Dataset, DataLoader
 import argparse
 import numpy as np 
 import os
+from torch.nn import functional as F
 device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
 def train(model, dataloader, optimizer, criterion):
@@ -29,7 +30,7 @@ def train(model, dataloader, optimizer, criterion):
         loss.backward()
         optimizer.step()
         
-        pred = torch.round(outputs)
+        pred = torch.round(torch.sigmoid(outputs))
         size = labels.size(0)
         losses += loss.item() * size 
         corrects += (pred == labels).sum()

@@ -17,14 +17,14 @@ def mixup_data(x, k = 4):
     batch_size = x.size(0)
     
     first_indices = torch.randperm(batch_size)
-    second_half = first_indices[batch_size:]
+    second_half = first_indices[batch_size//2:]
     second_indices = first_indices.clone()
-    second_indices[batch_size:] = second_half[torch.randperm(len(second_half))]
+    second_indices[batch_size//2:] = second_half[torch.randperm(len(second_half))]
     
     
     
     labels = torch.ones((first_indices.size(0),))
-    labels[batch_size:] = 1.0
+    labels[batch_size//2:] = 0.0
     
     first_indices = first_indices.to(device)
     second_indices = second_indices.to(device)
@@ -42,7 +42,6 @@ def mixup_data(x, k = 4):
     
     for i in range(1, k):
         
-        batch_size = x.size()[0]
         index1 = torch.randperm(batch_size).to(device)
         index2 =  torch.randperm(batch_size).to(device)
         
