@@ -16,17 +16,18 @@ def mixup_data(x, k = 4):
     '''Returns mixed inputs, lists of targets, and lambdas'''
     batch_size = x.size(0)
     
-    rand_indices = torch.stack([torch.randperm(batch_size) for i in range(k)], dim=0).cuda()
-    
-    rand_bits = torch.from_numpy(np.random.choice([0, 1], p=[0.75, 0.25], size=rand_indices.shape)).cuda()
-    
-    rand_indices_2 = rand_indices.clone()
-    
-    rand_indices_2[rand_bits==0] = torch.randint(0, batch_size, ((rand_bits==0).sum().item(),)).cuda()
-    
-    labels = torch.any(rand_bits == 1, dim=0).float()
+    first_indices = torch.randperm(batch_size)
+    second_half = first_indices[batch_size:]
+    second_indices = first_indices.clone()
+    second_indices[batch_size:] = second_half[torch.randperm(len(second_half))]
     
     
+    
+    labels = torch.ones((first_indices.size(0),))
+    labels[batch_size:] = 1.0
+    
+    first_indices = first_indices.to(device)
+    second_indices = second_indices.to(device)
     x = x.to(device)
     lams_dist = torch.distributions.Dirichlet(torch.tensor([1/k] * k))
     
@@ -36,23 +37,19 @@ def mixup_data(x, k = 4):
     lams1 = lams1.to(device)
     lams2 = lams2.to(device)
 
-    mixed_x_1 = None
-    mixed_x_2 = None
+    mixed_x_1 = vec_mul_ten(lams1[:, 0], x[first_indices])
+    mixed_x_2 = vec_mul_ten(lams2[:, 0], x[second_indices])
     
-    for i in range(0, k):
+    for i in range(1, k):
         
         batch_size = x.size()[0]
-        index = torch.randperm(batch_size).to(device)
-        index1 = rand_indices[i]
+        index1 = torch.randperm(batch_size).to(device)
+        index2 =  torch.randperm(batch_size).to(device)
         
-        index2 = rand_indices_2[i]
-        if mixed_x_1 is None:
-            mixed_x_1 = vec_mul_ten(lams1[:, i], x[index1])
-            mixed_x_2 = vec_mul_ten(lams2[:, i], x[index2])
-        else:
-            mixed_x_1 += vec_mul_ten(lams1[:, i], x[index1])
-            mixed_x_2 += vec_mul_ten(lams2[:, i], x[index2])
-            
+        
+        mixed_x_1 += vec_mul_ten(lams1[:, i], x[index1])
+        mixed_x_2 += vec_mul_ten(lams2[:, i], x[index2])
+        
         
         
     return mixed_x_1.cpu(), mixed_x_2.cpu(), labels.cpu()
